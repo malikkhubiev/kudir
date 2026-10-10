@@ -1,0 +1,481 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="year-switch">
+    <div class="export-bar">
+        <a class="btn-export" href="/export/txt?year={{ current_year }}">⬇ Экспорт .txt</a>
+        <a class="btn-export" href="/export/xlsx?year={{ current_year }}">⬇ Экспорт .xlsx</a>
+    </div>
+    <span>Год:</span>
+    {% for y in years %}
+        <a href="/?year={{ y }}" class="{% if y == current_year %}active{% endif %}">{{ y }}</a>
+    {% endfor %}
+</div>
+
+<section class="taxpayer">
+    <h2>📋 Реквизиты для декларации</h2>
+    <div class="taxpayer-grid">
+        <div class="taxpayer-item">
+            <div class="label">ИНН</div>
+            <div class="value mono">{{ taxpayer.inn }}</div>
+        </div>
+        <div class="taxpayer-item">
+            <div class="label">ОКТМО</div>
+            <div class="value mono">{{ taxpayer.oktmo }}</div>
+        </div>
+        <div class="taxpayer-item">
+            <div class="label">Код налогового органа</div>
+            <div class="value mono">{{ taxpayer.tax_authority }}</div>
+        </div>
+        <div class="taxpayer-item">
+            <div class="label">Отчётный период<br>21 — I кв.;<br>31 — полугодие;<br>33 — 9 мес.<br>34 — год;</div>
+            <div class="value mono">{{ taxpayer.period_code }} <span class="muted">({{ taxpayer.period_name }}, {{ current_year }})</span></div>
+        </div>
+    </div>
+</section>
+
+<section class="cards">
+    <div class="card">
+        <div class="label">Доходы {{ summary.year }}</div>
+        <div class="value">{{ "%.2f"|format(summary.income_year) }} ₽</div>
+    </div>
+    <div class="card">
+        <div class="label">Превышение 300К</div>
+        <div class="value">{{ "%.2f"|format(summary.excess) }} ₽</div>
+    </div>
+    <div class="card">
+        <div class="label">1% свыше 300К (к уплате)</div>
+        <div class="value">{{ "%.2f"|format(summary.one_percent_due) }} ₽</div>
+    </div>
+    <div class="card">
+        <div class="label">Налог 6% (брутто)</div>
+        <div class="value">{{ "%.2f"|format(summary.tax_gross) }} ₽</div>
+    </div>
+    <div class="card">
+        <div class="label">Уплачено фикс. (за {{ summary.year }})</div>
+        <div class="value">{{ "%.2f"|format(summary.fixed_paid) }} ₽</div>
+    </div>
+    <div class="card">
+        <div class="label">Уплачено 1% (за {{ summary.year }})</div>
+        <div class="value">{{ "%.2f"|format(summary.one_percent_paid) }} ₽</div>
+    </div>
+    <div class="card">
+        <div class="label">Уменьшение налога</div>
+        <div class="value">{{ "%.2f"|format(summary.reduction) }} ₽</div>
+    </div>
+    <div class="card highlight">
+        <div class="label">Налог к уплате (после уменьшения)</div>
+        <div class="value">{{ "%.2f"|format(summary.tax_final) }} ₽</div>
+    </div>
+    <div class="card highlight">
+        <div class="label">Налог остаток (минус уплаченный налог)</div>
+        <div class="value">{{ "%.2f"|format(summary.tax_remaining) }} ₽</div>
+    </div>
+</section>
+
+<section class="cards advances">
+    <div class="card {% if summary.advance_q1 %}paid{% else %}empty{% endif %}">
+        <div class="label">Аванс за I квартал</div>
+        <div class="value">
+            {% if summary.advance_q1 %}{{ "%.2f"|format(summary.advance_q1) }} ₽
+            {% else %}<span class="muted">не уплачен</span>{% endif %}
+        </div>
+    </div>
+    <div class="card {% if summary.advance_h1 %}paid{% else %}empty{% endif %}">
+        <div class="label">Аванс за полугодие</div>
+        <div class="value">
+            {% if summary.advance_h1 %}{{ "%.2f"|format(summary.advance_h1) }} ₽
+            {% else %}<span class="muted">не уплачен</span>{% endif %}
+        </div>
+    </div>
+    <div class="card {% if summary.advance_9m %}paid{% else %}empty{% endif %}">
+        <div class="label">Аванс за 9 месяцев</div>
+        <div class="value">
+            {% if summary.advance_9m %}{{ "%.2f"|format(summary.advance_9m) }} ₽
+            {% else %}<span class="muted">не уплачен</span>{% endif %}
+        </div>
+    </div>
+</section>
+
+<section class="grid">
+    <div>
+        <h2>➕ Добавить доход</h2>
+        <form method="post" action="/income/add" class="form">
+            <input type="date" name="op_date" required>
+            <input type="number" step="0.01" name="amount" placeholder="Сумма, ₽" required>
+            <input type="text" name="counterparty" placeholder="Контрагент">
+            <input type="text" name="comment" placeholder="Комментарий">
+            <button type="submit">Добавить</button>
+        </form>
+
+        <h3>Доходы</h3>
+        <table>
+            <thead>
+                <tr><th>Дата</th><th>Сумма</th><th>Контрагент</th><th>Комментарий</th><th></th></tr>
+            </thead>
+            <tbody>
+            {% for i in incomes %}
+                <tr>
+                    <td>{{ i.op_date }}</td>
+                    <td>{{ "%.2f"|format(i.amount) }} ₽</td>
+                    <td>{{ i.counterparty or "—" }}</td>
+                    <td>{{ i.comment or "" }}</td>
+                    <td class="actions">
+                        <button class="edit" type="button"
+                            onclick="openEditIncome({{ i.id }}, '{{ i.op_date }}', {{ i.amount }}, '{{ (i.counterparty or '')|e }}', '{{ (i.comment or '')|e }}')">✎</button>
+                        <form method="post" action="/income/delete/{{ i.id }}" style="display:inline">
+                            <button class="del">✕</button>
+                        </form>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="5">Пусто</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div>
+        <h2>💰 Внести платёж (факт)</h2>
+        <form method="post" action="/payment/add" class="form" id="payment-form">
+            <input type="date" name="pay_date" id="p_pay_date" required>
+            <select name="category" id="p_category" required>
+                <option value="fixed">Фикс. взносы</option>
+                <option value="one_percent">1% свыше 300К</option>
+                <option value="tax_q1">Аванс УСН I кв.</option>
+                <option value="tax_h1">Аванс УСН полугодие</option>
+                <option value="tax_9m">Аванс УСН 9 мес.</option>
+                <option value="tax">Налог УСН (год)</option>
+            </select>
+            <input type="number" step="0.01" name="amount" id="p_amount" placeholder="Сумма, ₽" required>
+            <input type="number" name="for_year" id="p_for_year" placeholder="За год"
+                   value="{{ current_year }}" required>
+            <input type="text" name="comment" id="p_comment" placeholder="Комментарий">
+            <button type="submit">Добавить платёж</button>
+        </form>
+
+        <h3>Платежи</h3>
+        <table>
+            <thead>
+                <tr><th>Дата</th><th>Категория</th><th>Сумма</th><th>За год</th><th>Комм.</th><th></th></tr>
+            </thead>
+            <tbody>
+            {% for p in payments %}
+                <tr>
+                    <td>{{ p.pay_date }}</td>
+                    <td>
+                        {% if p.category == 'fixed' %}Фикс. взносы
+                        {% elif p.category == 'one_percent' %}1% свыше 300К
+                        {% elif p.category == 'tax_q1' %}Аванс УСН I кв.
+                        {% elif p.category == 'tax_h1' %}Аванс УСН полугодие
+                        {% elif p.category == 'tax_9m' %}Аванс УСН 9 мес.
+                        {% elif p.category == 'tax' %}Налог УСН (год)
+                        {% else %}{{ p.category }}{% endif %}
+                    </td>
+                    <td>{{ "%.2f"|format(p.amount) }} ₽</td>
+                    <td>{{ p.for_year }}</td>
+                    <td>{{ p.comment or "" }}</td>
+                    <td class="actions">
+                        <button class="edit" type="button"
+                            onclick="openEditPayment({{ p.id }}, '{{ p.pay_date }}', '{{ p.category }}', {{ p.amount }}, {{ p.for_year }}, '{{ (p.comment or '')|e }}')">✎</button>
+                        <form method="post" action="/payment/delete/{{ p.id }}" style="display:inline">
+                            <button class="del">✕</button>
+                        </form>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="6">Пусто</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="grid">
+    <div class="full">
+        <h2>📅 Календарь (план)</h2>
+        <form method="post" action="/event/add" class="form form-inline">
+            <input type="date" name="event_date" required>
+            <input type="text" name="title" placeholder="Что сделать" required>
+            <input type="number" step="0.01" name="amount" placeholder="Сумма">
+            <select name="category">
+                <option value="tax">Налог (год)</option>
+                <option value="tax_q1">Аванс I кв.</option>
+                <option value="tax_h1">Аванс полугодие</option>
+                <option value="tax_9m">Аванс 9 мес.</option>
+                <option value="fixed">Фикс. взносы</option>
+                <option value="one_percent">1% свыше 300К</option>
+                <option value="declaration">Декларация</option>
+                <option value="other">Другое</option>
+            </select>
+            <input type="text" name="comment" placeholder="Комментарий">
+            <button type="submit">Добавить</button>
+        </form>
+
+        <table id="events-table">
+            <thead>
+                <tr>
+                    <th class="col-drag"></th>
+                    <th>Дата</th>
+                    <th>Категория</th>
+                    <th>Дело</th>
+                    <th>Сумма</th>
+                    <th>Готово</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="events-tbody">
+            {% for e in events %}
+                <tr class="{% if e.done %}done{% endif %}{% if date_counts.get(e.event_date, 0) > 1 %} sortable{% endif %}"
+                    data-id="{{ e.id }}"
+                    data-date="{{ e.event_date }}">
+                    <td class="col-drag">
+                        {% if date_counts.get(e.event_date, 0) > 1 %}
+                            <span class="drag-handle" draggable="true" title="Перетащить вверх/вниз" aria-label="Перетащить">⋮⋮</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ e.event_date }}</td>
+                    <td>
+                        {% if e.category == 'tax' %}Налог (год)
+                        {% elif e.category == 'tax_q1' %}Аванс I кв.
+                        {% elif e.category == 'tax_h1' %}Аванс полугодие
+                        {% elif e.category == 'tax_9m' %}Аванс 9 мес.
+                        {% elif e.category == 'fixed' %}Фикс. взносы
+                        {% elif e.category == 'one_percent' %}1% свыше 300К
+                        {% elif e.category == 'declaration' %}Декларация
+                        {% elif e.category == 'other' %}Другое
+                        {% else %}{{ e.category or "—" }}{% endif %}
+                    </td>
+                    <td>
+                        <strong>{{ e.title }}</strong>
+                        {% if e.comment %}<div class="muted">{{ e.comment }}</div>{% endif %}
+                    </td>
+                    <td>{% if e.amount %}{{ "%.2f"|format(e.amount) }} ₽{% endif %}</td>
+                    <td>
+                        <form method="post" action="/event/toggle/{{ e.id }}">
+                            <button class="ok">{% if e.done %}✔{% else %}○{% endif %}</button>
+                        </form>
+                    </td>
+                    <td class="actions">
+                        {% if e.category in ['fixed', 'one_percent', 'tax', 'tax_q1', 'tax_h1', 'tax_9m'] %}
+                            <button class="pay" type="button"
+                                onclick="openPayFromEvent('{{ e.event_date }}', '{{ e.category }}', {{ e.amount or 0 }}, {{ e.title and (e.title|length > 0 and e.title[:4]|int if e.title[:4].isdigit() else current_year) or current_year }}, '{{ (e.title or '')|e }}')">→ Внести факт</button>
+                        {% endif %}
+                        <button class="edit" type="button"
+                            onclick="openEditEvent({{ e.id }}, '{{ e.event_date }}', '{{ (e.title or '')|e }}', {{ e.amount or 'null' }}, '{{ e.category }}', '{{ (e.comment or '')|e }}')">✎</button>
+                        <form method="post" action="/event/delete/{{ e.id }}" style="display:inline">
+                            <button class="del">✕</button>
+                        </form>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="7">Пусто</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="strategy">
+    <h2>🧭 Стратегия</h2>
+    <ol>
+        <li>Никаких авансовых уведомлений — сначала декларация, потом платёж.</li>
+        <li>25.12.2026 — фикс. взнос за 2026 (3 мес) ≈ {{ "%.2f"|format(57390/12*3) }} ₽.</li>
+        <li>20.04.2027 — декларация за 2026, затем 1% свыше 300К, затем уменьшенный налог за 2026, затем аванс УСН за 1 кв. 2027.</li>
+        <li>Делаем всё заранее — минимум за 5 дней до дедлайна.</li>
+        <li>Группируем дела в один день.</li>
+    </ol>
+</section>
+
+<!-- ================== Модальные окна ================== -->
+
+<!-- Редактирование дохода -->
+<div class="modal" id="modal-income">
+    <div class="modal-box">
+        <h3>Редактировать доход</h3>
+        <form method="post" id="form-income-edit" class="form">
+            <input type="date" name="op_date" id="ei_date" required>
+            <input type="number" step="0.01" name="amount" id="ei_amount" placeholder="Сумма" required>
+            <input type="text" name="counterparty" id="ei_counterparty" placeholder="Контрагент">
+            <textarea name="comment" id="ei_comment" class="modal-comment" placeholder="Комментарий"></textarea>
+            <div class="modal-actions">
+                <button type="button" class="cancel" onclick="closeModal('modal-income')">Отмена</button>
+                <button type="submit">Сохранить</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Редактирование платежа -->
+<div class="modal" id="modal-payment">
+    <div class="modal-box">
+        <h3>Редактировать платёж</h3>
+        <form method="post" id="form-payment-edit" class="form">
+            <input type="date" name="pay_date" id="ep_date" required>
+            <select name="category" id="ep_category" required>
+                <option value="fixed">Фикс. взносы</option>
+                <option value="one_percent">1% свыше 300К</option>
+                <option value="tax_q1">Аванс УСН I кв.</option>
+                <option value="tax_h1">Аванс УСН полугодие</option>
+                <option value="tax_9m">Аванс УСН 9 мес.</option>
+                <option value="tax">Налог УСН (год)</option>
+            </select>
+            <input type="number" step="0.01" name="amount" id="ep_amount" required>
+            <input type="number" name="for_year" id="ep_for_year" required>
+            <textarea name="comment" id="ep_comment" class="modal-comment" placeholder="Комментарий"></textarea>
+            <div class="modal-actions">
+                <button type="button" class="cancel" onclick="closeModal('modal-payment')">Отмена</button>
+                <button type="submit">Сохранить</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Редактирование события -->
+<div class="modal" id="modal-event">
+    <div class="modal-box">
+        <h3>Редактировать дело</h3>
+        <form method="post" id="form-event-edit" class="form">
+            <input type="date" name="event_date" id="ee_date" required>
+            <input type="text" name="title" id="ee_title" required>
+            <input type="number" step="0.01" name="amount" id="ee_amount" placeholder="Сумма">
+            <select name="category" id="ee_category">
+                <option value="tax">Налог (год)</option>
+                <option value="tax_q1">Аванс I кв.</option>
+                <option value="tax_h1">Аванс полугодие</option>
+                <option value="tax_9m">Аванс 9 мес.</option>
+                <option value="fixed">Фикс. взносы</option>
+                <option value="one_percent">1% свыше 300К</option>
+                <option value="declaration">Декларация</option>
+                <option value="other">Другое</option>
+            </select>
+            <textarea name="comment" id="ee_comment" class="modal-comment" placeholder="Комментарий"></textarea>
+            <div class="modal-actions">
+                <button type="button" class="cancel" onclick="closeModal('modal-event')">Отмена</button>
+                <button type="submit">Сохранить</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function openEditIncome(id, date, amount, cp, comment) {
+    document.getElementById('form-income-edit').action = '/income/edit/' + id;
+    document.getElementById('ei_date').value = date;
+    document.getElementById('ei_amount').value = amount;
+    document.getElementById('ei_counterparty').value = cp;
+    document.getElementById('ei_comment').value = comment;
+    openModal('modal-income');
+}
+
+function openEditPayment(id, date, cat, amount, forYear, comment) {
+    document.getElementById('form-payment-edit').action = '/payment/edit/' + id;
+    document.getElementById('ep_date').value = date;
+    document.getElementById('ep_category').value = cat;
+    document.getElementById('ep_amount').value = amount;
+    document.getElementById('ep_for_year').value = forYear;
+    document.getElementById('ep_comment').value = comment;
+    openModal('modal-payment');
+}
+
+function openEditEvent(id, date, title, amount, cat, comment) {
+    document.getElementById('form-event-edit').action = '/event/edit/' + id;
+    document.getElementById('ee_date').value = date;
+    document.getElementById('ee_title').value = title;
+    document.getElementById('ee_amount').value = amount || '';
+    document.getElementById('ee_category').value = cat;
+    document.getElementById('ee_comment').value = comment;
+    openModal('modal-event');
+}
+
+function openPayFromEvent(date, cat, amount, forYear, title) {
+    document.getElementById('p_pay_date').value = date;
+    document.getElementById('p_category').value = cat;
+    document.getElementById('p_amount').value = amount || '';
+    document.getElementById('p_for_year').value = forYear;
+    document.getElementById('p_comment').value = title;
+    document.getElementById('payment-form').scrollIntoView({behavior: 'smooth', block: 'center'});
+    document.getElementById('p_amount').focus();
+}
+
+// Закрытие модалки по клику на фон
+document.querySelectorAll('.modal').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+// Перетаскивание дел внутри одного дня
+(function () {
+    const tbody = document.getElementById('events-tbody');
+    if (!tbody) return;
+
+    let dragRow = null;
+
+    function sameDateRows(date) {
+        return [...tbody.querySelectorAll('tr.sortable[data-date="' + date + '"]')];
+    }
+
+    async function saveOrder(date) {
+        const ids = sameDateRows(date).map(r => parseInt(r.dataset.id, 10));
+        try {
+            await fetch('/event/reorder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids }),
+            });
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    tbody.addEventListener('dragstart', e => {
+        const handle = e.target.closest('.drag-handle');
+        if (!handle) {
+            e.preventDefault();
+            return;
+        }
+        const row = handle.closest('tr.sortable');
+        if (!row) return;
+        dragRow = row;
+        row.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', row.dataset.id);
+    });
+
+    tbody.addEventListener('dragend', e => {
+        if (!dragRow) return;
+        dragRow.classList.remove('dragging');
+        tbody.querySelectorAll('tr.drag-over').forEach(r => r.classList.remove('drag-over'));
+        saveOrder(dragRow.dataset.date);
+        dragRow = null;
+    });
+
+    tbody.addEventListener('dragover', e => {
+        if (!dragRow) return;
+        const target = e.target.closest('tr.sortable');
+        if (!target || target === dragRow) return;
+        if (target.dataset.date !== dragRow.dataset.date) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+
+        const rect = target.getBoundingClientRect();
+        const before = e.clientY < rect.top + rect.height / 2;
+        tbody.querySelectorAll('tr.drag-over').forEach(r => r.classList.remove('drag-over'));
+        target.classList.add('drag-over');
+        if (before) {
+            tbody.insertBefore(dragRow, target);
+        } else {
+            tbody.insertBefore(dragRow, target.nextSibling);
+        }
+    });
+
+    tbody.addEventListener('drop', e => {
+        e.preventDefault();
+        tbody.querySelectorAll('tr.drag-over').forEach(r => r.classList.remove('drag-over'));
+    });
+})();
+</script>
+
+{% endblock %}

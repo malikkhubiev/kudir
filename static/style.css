@@ -1,0 +1,254 @@
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #f4f6f9;
+    color: #1f2937;
+}
+header {
+    background: #1e3a8a;
+    color: #fff;
+    padding: 16px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+header h1 { margin: 0; font-size: 20px; }
+nav a { color: #c7d2fe; text-decoration: none; margin-left: 16px; }
+main { padding: 24px; max-width: 1200px; margin: 0 auto; }
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+}
+.card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 14px 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+.card.highlight { background: #ecfdf5; border: 1px solid #10b981; }
+.card .label { font-size: 12px; color: #6b7280; }
+.card .value { font-size: 20px; font-weight: 700; margin-top: 4px; }
+
+.taxpayer {
+    background: #fff;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    border-left: 4px solid #1e3a8a;
+}
+.taxpayer h2 { margin: 0 0 12px; font-size: 16px; }
+.taxpayer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+}
+.taxpayer-item .label { font-size: 12px; color: #6b7280; }
+.taxpayer-item .value { font-size: 16px; font-weight: 600; margin-top: 2px; }
+.taxpayer-item .value.mono { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; letter-spacing: .02em; }
+
+.cards.advances { margin-top: -8px; }
+.card.paid { background: #eff6ff; border: 1px solid #93c5fd; }
+.card.empty { background: #f9fafb; border: 1px dashed #d1d5db; }
+.card.empty .value { font-size: 16px; font-weight: 500; }
+
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+.form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+.form input, .form select, .form textarea, .form button {
+    padding: 8px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+}
+.form textarea {
+    font-family: inherit;
+    resize: vertical;
+}
+.modal-comment {
+    grid-column: 1 / -1;
+    width: 100%;
+    height: 250px;
+    min-height: 250px;
+}
+.form button {
+    background: #1e3a8a;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    grid-column: span 2;
+}
+.form button:hover { background: #1e40af; }
+
+table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; }
+th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #eef1f5; font-size: 14px; }
+th { background: #f9fafb; font-size: 12px; color: #6b7280; text-transform: uppercase; }
+tr.done td { opacity: .5; text-decoration: line-through; }
+.muted { color: #6b7280; font-size: 12px; }
+
+button.ok, button.del {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 2px 6px;
+}
+button.del { color: #ef4444; }
+button.ok { color: #10b981; }
+
+.strategy {
+    margin-top: 32px;
+    background: #fff;
+    padding: 20px 24px;
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+.strategy ol { margin: 0; padding-left: 20px; }
+.strategy li { margin-bottom: 6px; }
+.year-switch {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 16px;
+}
+.year-switch span { color: #6b7280; font-size: 14px; }
+.year-switch a {
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: #e5e7eb;
+    color: #1f2937;
+    text-decoration: none;
+    font-size: 14px;
+}
+.year-switch a.active { background: #1e3a8a; color: #fff; }
+
+.form-inline {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+.form-inline button { grid-column: span 1; }
+
+.full { grid-column: 1 / -1; }
+
+.actions { display: flex; gap: 4px; align-items: center; }
+.actions form { margin: 0; }
+
+button.edit, button.pay {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 6px;
+}
+button.edit { color: #2563eb; }
+button.pay {
+    color: #059669;
+    border: 1px solid #059669;
+    border-radius: 6px;
+    font-size: 12px;
+    padding: 2px 8px;
+}
+button.pay:hover { background: #ecfdf5; }
+
+/* Модальные окна */
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.45);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+}
+.modal.open { display: flex; }
+.modal-box {
+    background: #fff;
+    padding: 20px 24px;
+    border-radius: 10px;
+    min-width: 380px;
+    max-width: 500px;
+    box-shadow: 0 10px 40px rgba(0,0,0,.2);
+}
+.modal-box h3 { margin: 0 0 12px; }
+.modal-actions {
+    grid-column: span 2;
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 8px;
+}
+.modal-actions button {
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    cursor: pointer;
+}
+.modal-actions button[type="submit"] {
+    background: #1e3a8a;
+    color: #fff;
+    border: none;
+}
+.modal-actions .cancel:hover { background: #f3f4f6; }
+
+.export-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+.btn-export {
+    display: inline-block;
+    padding: 6px 14px;
+    background: #059669;
+    color: #fff;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 14px;
+}
+.btn-export:hover { background: #047857; }
+.cancel{
+    color: #1e3a8a !important;
+}
+
+/* Перетаскивание дел в календаре */
+.col-drag {
+    width: 28px;
+    padding-left: 6px;
+    padding-right: 0;
+}
+.drag-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 28px;
+    color: #9ca3af;
+    cursor: grab;
+    user-select: none;
+    letter-spacing: -2px;
+    font-size: 14px;
+    line-height: 1;
+}
+.drag-handle:active { cursor: grabbing; }
+tr.sortable:hover .drag-handle { color: #4b5563; }
+tr.dragging {
+    opacity: .55;
+    background: #eff6ff;
+}
+tr.drag-over {
+    box-shadow: inset 0 2px 0 #1e3a8a;
+}
+tr.done .drag-handle { text-decoration: none; }
